@@ -1,29 +1,52 @@
 name: Build NextClient
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main  # замените на вашу основную ветку
+  pull_request:
+    branches:
+      - main  # замените на вашу основную ветку
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest  # Вы используете MSVC и требуете x86 Native Tools Command Prompt
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Install system dependencies
+    - name: Set up MSVC environment
+      shell: cmd
       run: |
-        sudo apt-get update
-        sudo apt-get install -y ninja-build libxinerama-dev libxcursor-dev xorg-dev libglu1-mesa-dev pkg-config
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"  # Путь может отличаться в зависимости от установки
+        cmake --version  # Проверяем версию CMake
 
-    - name: Set up vcpkg
+    - name: Install vcpkg dependencies
       run: |
         git clone https://github.com/microsoft/vcpkg.git
-        ./vcpkg/bootstrap-vcpkg.sh
-        ./vcpkg/vcpkg integrate install
-        ./vcpkg/vcpkg install
+        .\vcpkg\bootstrap-vcpkg.bat
+        .\vcpkg\vcpkg integrate install
+        .\vcpkg\vcpkg install
 
-    - name: Build project
+    - name: Build project with Ninja (if available)
+      if: success()
       run: |
-        mkdir -p cmake-build-release
+        mkdir cmake-build-release
         cd cmake-build-release
-        cmake --build . --target BUILD_ALL
+        cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Release ..
+        cmake --build .
+
+    - name: Build project with NMake Makefiles (fallback)
+      if: failure()  # Запускаем только в случае неудачи сборки с Ninja
+      run: |
+        mkdir cmake-build-release
+        cd cmake-build-release
+        cmake -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+        cmake --build .
+
+    - name: Install project (if needed)
+      if: success()  # Устанавливаем только в случае успешной сборки
+      run: |
+        cmake --build . --target INSTALL_ALL
+
