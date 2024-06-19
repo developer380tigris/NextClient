@@ -26,5 +26,4 @@ jobs:
       run: |
         mkdir -p cmake-build-release
         cd cmake-build-release
-        cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake ..
         cmake --build . --target BUILD_ALL
